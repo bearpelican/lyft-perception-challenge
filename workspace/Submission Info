@@ -1,0 +1,13 @@
+First run ./preinstall_script.sh to install your required dependencies if any.
+
+When you are ready to test your solution run the grader tool in the command line giving it one argument. The argument is what you would run when evaluating your program without the supplied video path argument. 
+
+For example of terminal version of your program: python Example/demo.py Example/test_video.mp4
+
+Example of grader without video argument: grader 'python Example/demo.py'
+
+Note: Executable must accept a video path as an argument and output a json following the submission format.
+
+You will be submitting the results of your last running of the grader.
+
+When you are satisfied with the results open the jwt file and follow the instructions. After filling the out the jwt file with your jwt token then enter `submit` into the commandline. You will only be allowed one submission on the leaderboard.
