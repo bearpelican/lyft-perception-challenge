@@ -36,7 +36,7 @@ class UnetBlock(nn.Module):
         up_p = self.tr_conv(up_p)
         x_p = self.x_conv(x_p)
         cat_p = torch.cat([up_p,x_p], dim=1)
-        return self.bn(F.relu(cat_p))
+        return self.bn(F.relu(cat_p, inplace=True))
 
 class Unet34(nn.Module):
     def __init__(self, rn):
@@ -52,7 +52,7 @@ class Unet34(nn.Module):
         
     def forward(self,x):
         inp = x
-        x = F.relu(self.rn(x))
+        x = F.relu(self.rn(x), inplace=True)
         x = self.up1(x, self.sfs[3].features)
         x = self.up2(x, self.sfs[2].features)
         x = self.up3(x, self.sfs[1].features)
@@ -91,7 +91,6 @@ m = Unet34(m_base)
 PATH = Path('../data/Train')
 
 cuda_enabled = torch.cuda.is_available()
-print(Path.cwd())
 model_path = str(Path.cwd()/'600urn-multi.h5')
 if cuda_enabled:
     m = m.cuda()
@@ -120,22 +119,28 @@ video = skvideo.io.vread(file)
 imagenet_stats = np.array([[0.485, 0.456, 0.406], [0.229, 0.224, 0.225]])
 def normalize(x):
     if np.mean(x) > 1:
-        x = x/255
+        x /= 255
     m,s = imagenet_stats
-    x = (x-m)/s
+    x -= m
+    x /= s
     return x
 def preprocess(video):
-    f1_norm = normalize(video)
-    f1_roll = np.rollaxis(f1_norm, 3, 1)
-    f1_pad = np.pad(f1_roll, [(0,0),(0,0),(0,8),(0,0)], mode='constant')
-    return f1_pad
+    f1 = normalize(video)
+    f1 = np.rollaxis(f1, 3, 1)
+#     f1 = np.pad(f1, [(0,0),(0,0),(0,8),(0,0)], mode='constant')
+    f1_shape = list(f1.shape)
+    f1_shape[2] = 608
+    f1_new = np.empty(f1_shape)
+    f1_new[:,:,:-8,:] = f1
+    return f1_new
 
 f1 = preprocess(video)
 
 # Predict
 results = []
-for i in range(0,f1.shape[0],8):
-    xv = torch.autograd.Variable(torch.from_numpy(f1[i:i+8]).contiguous().float())
+bs = 4
+for i in range(0,f1.shape[0],bs):
+    xv = torch.autograd.Variable(torch.from_numpy(f1[i:i+bs]).contiguous().float())
     if cuda_enabled:
         xv = xv.cuda()
     preds = m(xv)
@@ -164,8 +169,5 @@ for frame in r_np:
     frame_idx+=1
 
 # Print output in proper json format
-tester_data = json.dumps(answer_key)
-with open('tester_data', 'w') as f:
-    f.write(tester_data)
-print(json.dumps(answer_key))
+print (json.dumps(answer_key))
 
