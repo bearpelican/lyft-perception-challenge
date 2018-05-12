@@ -118,55 +118,48 @@ video = skvideo.io.vread(file)
 
 imagenet_stats = np.array([[0.485, 0.456, 0.406], [0.229, 0.224, 0.225]])
 def normalize(x):
+    x = x.astype(np.float32)
     if np.mean(x) > 1:
         x /= 255
     m,s = imagenet_stats
     x -= m
     x /= s
     return x
+
 def preprocess(video):
     f1 = normalize(video)
     f1 = np.rollaxis(f1, 3, 1)
-#     f1 = np.pad(f1, [(0,0),(0,0),(0,8),(0,0)], mode='constant')
-    f1_shape = list(f1.shape)
-    f1_shape[2] = 608
-    f1_new = np.empty(f1_shape)
-    f1_new[:,:,:-8,:] = f1
-    return f1_new
+    return f1
 
-f1 = preprocess(video)
-
-# Predict
+video = preprocess(video)
 results = []
+answer_key = {}
 bs = 4
-for i in range(0,f1.shape[0],bs):
-    xv = torch.autograd.Variable(torch.from_numpy(f1[i:i+bs]).contiguous().float())
+for i in range(0,video.shape[0],bs):
+    f1 = video[i:i+bs]
+    f1 = np.pad(f1, [(0,0),(0,0),(0,8),(0,0)], mode='constant')
+    
+    xv = torch.autograd.Variable(torch.from_numpy(f1).contiguous().float())
     if cuda_enabled:
         xv = xv.cuda()
     preds = m(xv)
     mx,idx = torch.max(preds, 1)
-    idx_slice = idx[:,:-8,:]
-    results.append(idx_slice)
-
-r_stacked = torch.cat(results,0)
-r_np = r_stacked.data.cpu().numpy()
-
-
-# Output answer
-answer_key = {}
-# Frame numbering starts at 1
-frame_idx = 1
-for frame in r_np:
-    # Look for red cars :)
-    binary_car_result = (frame==1).astype('uint8')
+    idx = idx[:,:-8,:]
     
-    # Look for road :)
-    binary_road_result = (frame==2).astype('uint8')
+    # Frame numbering starts at 1
+    frame_idx = 1+i
+    for frame in idx:
+        # Look for red cars :)
+        frame = frame.data.cpu().numpy()
+        binary_car_result = (frame==1).astype('uint8')
 
-    answer_key[frame_idx] = [encode(binary_car_result), encode(binary_road_result)]
-    
-    # Increment frame
-    frame_idx+=1
+        # Look for road :)
+        binary_road_result = (frame==2).astype('uint8')
+
+        answer_key[frame_idx] = [encode(binary_car_result), encode(binary_road_result)]
+
+        # Increment frame
+        frame_idx+=1
 
 # Print output in proper json format
 print (json.dumps(answer_key))
