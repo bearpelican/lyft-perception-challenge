@@ -1,9 +1,3 @@
-
-# coding: utf-8
-
-# In[35]:
-
-
 import sys, skvideo.io, json, base64
 import numpy as np
 from PIL import Image
@@ -91,7 +85,7 @@ m = Unet34(m_base)
 PATH = Path('../data/Train')
 
 cuda_enabled = torch.cuda.is_available()
-model_path = str(Path.cwd()/'600urn-multi.h5')
+model_path = str(Path.cwd()/'600urn-pad-instead.h5')
 if cuda_enabled:
     m = m.cuda()
     m.load_state_dict(torch.load(model_path))
@@ -120,37 +114,66 @@ imagenet_stats = np.array([[0.485, 0.456, 0.406], [0.229, 0.224, 0.225]])
 def normalize(x):
     x = x.astype(np.float32)
     if np.mean(x) > 1:
-        x /= 255
+        x /= 255.0
     m,s = imagenet_stats
     x -= m
     x /= s
     return x
 
+def crop_bg(x):
+    # Original
+    h = x.shape[1]
+    top = int(h/3.75)
+    bot = int(h*.9 + h/150)
+    return x[:,top:bot,:,:]
+
+def pad(x):
+#     print(x.shape)
+    # Original
+    b,c,w,h = x.shape
+    print(x.shape)
+    pad_right=32-h%32
+    if pad_right:
+        x = F.pad(x, (0,pad_right,0,0), 'constant', 0)
+    return x, pad_right
+    
+def undo(idx):
+    idx
+    idx = F.pad(idx, (0,0,226,54), "constant", 0)
+
 def preprocess(video):
-    f1 = normalize(video)
+    f1 = crop_bg(video)
+    f1 = normalize(f1)
     f1 = np.rollaxis(f1, 3, 1)
-    return f1
+    return f1.copy(order='C')
 
 video = preprocess(video)
 results = []
 answer_key = {}
-bs = 4
+bs = 6
+
+import gc
+gc.collect()
+
+      
 for i in range(0,video.shape[0],bs):
     f1 = video[i:i+bs]
-    f1 = np.pad(f1, [(0,0),(0,0),(0,8),(0,0)], mode='constant')
     
-    xv = torch.autograd.Variable(torch.from_numpy(f1).contiguous().float())
+    x = torch.from_numpy(f1).contiguous().float()
     if cuda_enabled:
-        xv = xv.cuda()
-    preds = m(xv)
+        x = x.cuda()
+    x,p = pad(x)
+    preds = m(x)
     mx,idx = torch.max(preds, 1)
-    idx = idx[:,:-8,:]
+    
+    idx = F.pad(idx[:,:,:-p], (0,0,160,56), "constant", 0)
     
     # Frame numbering starts at 1
     frame_idx = 1+i
     for frame in idx:
         # Look for red cars :)
         frame = frame.data.cpu().numpy()
+        results.append(frame)
         binary_car_result = (frame==1).astype('uint8')
 
         # Look for road :)
