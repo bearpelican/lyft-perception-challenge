@@ -41,20 +41,20 @@ settings.add_sensor(camera1)
 Output:  
 ![alt text][image2]
 
-#### Data Preprocess
+### Data Preprocess
 Trimmed the sky and the car hood images (384x800px). Image dimensions needed to be divisible by 32 due to the 5 downsample layers in Resnet34.
 Preprocessed target labels to 3 categories: Vehicle, Road, Everything Else.  
 ![alt text][image3]
 
 
-#### Data augmentation
+### Data augmentation
 Random resized crop: trained with both square cropping (384x384) and rectangle cropping (384x800)  
 Random Horizontal Flip  
 Random Color Jitter (Brightness, Contrast, Saturation): .2, .2, .2  
 Normalization: Used imagenet stats  
 
 
-#### Architecture
+### Architecture
 
 [Model](./examples/arch.py)  
 U-net with Resnet34 backbone. Inspired by Fast.AI's [Carvana implmentation](https://github.com/fastai/fastai/blob/master/courses/dl2/carvana-unet.ipynb) 
@@ -71,7 +71,7 @@ U-net + LSTM with Resnet34 backbone:
 
 I wanted to choose the fastest architecture to iterate as fast as possible. Probably could have achieved a much higher accuracy towards the end by using a deeper network.
 
-#### Loss Function
+### Loss Function
 Used custom loss function [here](./examples/loss.py)
 
 Competition scoring was measured by a weighted F score:  
@@ -92,7 +92,7 @@ Sigmoid vs Softmax: sigmoid worked better for me, but did not do enough testing 
 
 ---
 
-#### Bugs
+### Bugs
 **Discovering the location of the answers**  
 Udacity provided contestants with a GPU server with 50 hours of time. Results were submitted by uploading your model to the server and running a script.  
 While trying to understand how the submission process worked, I discovered that the answers were downloaded to a temporary directory on the server and evaluated against your model. The trick was just to figure out where that temporary directory was located, and copy it before the obfuscated script deleted it.  
@@ -120,16 +120,17 @@ The score jumped from 9.2 to 9.6 - more in line with my own evaluation metrics. 
 **Reporting bugs to Udacity**  
 Figured in the spirit of fairness (after all this was a Lyft competition, not Uber), I should report this to Udacity. Turns out they knew about bug #1. However, bug #2 turned out to be an encoding/decoding error with a third party library they were using. With only a few days left of the competition, it was too late to correct the mistake. Thus, Udacity thanked me, and asked me not to submit my 9.6 score. 
 
-Which means my ranking dropped from this:
-![alt text][image1]
-to this: 
+Which means my ranking dropped from this:  
+![alt text][image1]  
+
+to this:  
 ![alt text][image7]
 
 To my knowledge and theirs, none of the other contestants knew of these bugs or at least used them to exploit the leaderboard.
 
 I have no hard feelings about being unable to submit my best answer. Throughout the process, Udacity was very responsive and understanding. Plus, whole competition was a great learning experience for me - which is what it's all about.  
 
-#### Things I learned
+### Things I learned
 Evaluate your model with the exact same metrics the competition does  
 Run and visualize your whole pipeline step by step. You never know where mistakes are hiding =)
 
