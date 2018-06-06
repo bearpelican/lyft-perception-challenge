@@ -38,7 +38,7 @@ camera1.set_position(1.30, 0, 1.30)
 settings.add_sensor(camera1)
 ```
 
-Output:
+Output:  
 ![alt text][image2]
 
 #### Data Preprocess
@@ -62,7 +62,7 @@ U-net with Resnet34 backbone. Inspired by Fast.AI's [Carvana implmentation](http
 Tried several different architectures in this [notebook](./workspace/Example/lyft-unet-train34-arch-speed.ipynb). Chose the one suited best for speed and accuracy.
 
 Original U-net: 3x slower to train  
-U-net with VGG11 backbone: 1.5x slower. Not as accurate  
+U-net with VGG11 backbone: 1.5x slower. Not as accurate. This [paper](http://www.cs.umanitoba.ca/~ywang/papers/cvpr17.pdf) seems to think Resnets work better as a backbone too  
 U-net with Resnet50 backbone: 2x slower  
 U-net + LSTM with Resnet34 backbone: 
 * Ran the encoder through an LSTM before sending it to the decoder. Used an RNN to encode temporal video data. Inspired by  STFCN [paper](https://arxiv.org/pdf/1608.05971.pdf). 
