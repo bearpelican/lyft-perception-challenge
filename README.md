@@ -10,7 +10,7 @@ Goal: achieve the highest accuracy on vehicle and road detection with an FPS gre
 
 ### Results
 I achieved the highest "unofficial" score (95.97) in the competition by discovering a bug in the competition. This score was almost 2 points higher than the leader 93.22.  
-![alt text][image1]
+![alt text][image8]
 
 However, after reporting this bug, I was asked to remove my results.  Without the exploit, this model achieved [16th](https://classroom.udacity.com/nanodegrees/nd013/parts/78a1caae-489e-4e75-8368-e65cec97f63b/modules/f2b38613-4094-451e-957b-2a343dc667c0/lessons/fce3e4a7-05c3-43f4-9fe3-84f3f150b368/concepts/04ca1c4c-66b5-471b-859e-8fcaedd793ec). Deeper explanation [here](#bugs)
 
@@ -90,6 +90,13 @@ Turns out the simple weighted cross-entropy (car weight of 5, road weight of 2) 
 
 Sigmoid vs Softmax: sigmoid worked better for me, but did not do enough testing to verify this.
 
+
+### FP16
+Could not get half precision training to work with pytorch. However, I did use it for evaluation, to enable a larger batch size and slightly faster inference.
+Half precision specifically fails on the loss function when evaluating segmentation models. Cross entropy average = sum of losses / shape of y. With segmentation, the shape of y (batch x width x height) is already higher than the maximum range of fp16 (65520 ~ 2^16).  
+As a result, when calling backwards, you'll get `RuntimeError: value cannot be converted to type Half without overflow`  
+This is not a problem for classification as y (batch x classes) is pretty small. the mean calculation of the loss does not run into the half precision limit because both the sum of losses and the product of dimensions is usually low - as you are usually calculating the cross entropy for less than 10 classes.
+
 ---
 
 ### Bugs
@@ -97,9 +104,11 @@ Sigmoid vs Softmax: sigmoid worked better for me, but did not do enough testing 
 Udacity provided contestants with a GPU server with 50 hours of time. Results were submitted by uploading your model to the server and running a script.  
 While trying to understand how the submission process worked, I discovered that the answers were downloaded to a temporary directory on the server and evaluated against your model. The trick was just to figure out where that temporary directory was located, and copy it before the obfuscated script deleted it.  
 
-**Obviously** this is really bad. I was able to achieve a perfect score of 10 with an FPS of 1000 by just [submitting](./workspace/Example/demo-precashed-ans.py) the answers I found. 
+With this knowledge, I was able to achieve a perfect score of 10 with an FPS of 1000 by just [submitting](./workspace/Example/demo-precashed-ans.py) the answers I found.  
+Udacity knew about this loophole and left it open. To prevent bogus submissions, they would evaluate the final results on another private dataset instead.  
+However, due to the next bug, the final answers were not actually evaluated on a private test set.
 
-**Discovering that these answers are actually wrong**  
+**Discovering that these answers are actually off**  
 Before I discovered the location of the answers, I noticed something strange about my submission. I would achieve a weighted F score of 9.6 while training. However, when I submitted the results, I would only get a score of 9.2.  
 Because of this, I started to look at the example video they gave me and overlayed segmentation labels onto them. Turns out half way through the video, the segmentation labels are off by 1 frame.
 
@@ -118,7 +127,7 @@ mismatched_idxs = list(range(15,44)) + list(range(200,750))
 The score jumped from 9.2 to 9.6 - more in line with my own evaluation metrics. This meant that if corrected, all the scores on the leaderboard could potentially jump 4 points.
 
 **Reporting bugs to Udacity**  
-Figured in the spirit of fairness (after all this was a Lyft competition, not Uber), I should report this to Udacity. Turns out they knew about bug #1. However, bug #2 turned out to be an encoding/decoding error with a third party library they were using. With only a few days left of the competition, it was too late to correct the mistake. Thus, Udacity thanked me, and asked me not to submit my 9.6 score. 
+Figured in the spirit of fairness (after all this was a Lyft competition, not Uber), I should report this to Udacity. Turns out they knew about bug #1. However, bug #2 turned out to be an encoding/decoding error with a third party library they were using. With only a few days left of the competition, it was too late to correct the error. Thus, Udacity thanked me, and kindly asked me not to submit my 9.6 score. Which is pretty understandable  
 
 Which means my ranking dropped from this:  
 ![alt text][image1]  
@@ -126,13 +135,16 @@ Which means my ranking dropped from this:
 to this:  
 ![alt text][image7]
 
-To my knowledge and theirs, none of the other contestants knew of these bugs or at least used them to exploit the leaderboard.
 
-I have no hard feelings about being unable to submit my best answer. Throughout the process, Udacity was very responsive and understanding. Plus, whole competition was a great learning experience for me - which is what it's all about.  
+To my knowledge and theirs, none of the other contestants knew of these bugs or at least used them to exploit the leaderboard.
+Because of this disclosure, the final results were no longer evaluated on the private test set. Fixing this mistake on the private test set could have changed the leaderboard very dramatically. Some models could have been better at being wrong than others...  
+
 
 ### Things I learned
 Evaluate your model with the exact same metrics the competition does  
-Run and visualize your whole pipeline step by step. You never know where mistakes are hiding =)
+Run and visualize your whole pipeline step by step. You never know where mistakes are hiding =)  
+More helpful to build and learn from my mistakes than copy models from others.  
+Going back after the competition to see what others did, is a great way to learn.
 
 
 [//]: # (Image References)
@@ -144,3 +156,4 @@ Run and visualize your whole pipeline step by step. You never know where mistake
 [image5]: ./examples/mismatch_frame_30.png "Frame 30"
 [image6]: ./workspace/merged_unsynced_output.mp4 "Mismatched Output"
 [image7]: ./examples/sad_leaderboard_screenshot.png "Leaderboard Exploit"
+[image8]: ./examples/cropped_leaderboard.png "Full leaderboard"
