@@ -1,4 +1,4 @@
-# **Lyft Preception Challenge** 
+# **(Unofficial) 1st Place Lyft Preception Challenge Writeup** 
 
 ---
 
